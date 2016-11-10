@@ -48,7 +48,7 @@ unsigned char w_buf[5],ptr,r_buf[32];
 unsigned long reg_addr=0;    
 
 #define dbg 0
-int grovePiInit(void)
+int grove_pi_init(void)
 {
 	if ((fd = open(fileName, O_RDWR)) < 0) 
 	{					// Open port for reading and writing
@@ -65,7 +65,12 @@ int grovePiInit(void)
 }
 //Write a register
 int write_block(char cmd,char v1,char v2,char v3)
-{			
+{
+    if (address != 0x04) {
+        ioctl(fd, I2C_SLAVE, 0x04);
+        address = 0x04;
+    }
+    
 	int dg;
 	w_buf[0]=cmd;
     w_buf[1]=v1;
@@ -85,11 +90,16 @@ int write_block(char cmd,char v1,char v2,char v3)
     return 1; 
 }
 
-int write_byte_data(char addr, char cmd,char value)
+int write_byte_data(unsigned char addr, unsigned char cmd, unsigned char value)
 {                       
         int dg;
-        
-    dg=i2c_smbus_write_byte_data(addr,cmd,value);
+    
+    if (address != addr) {
+        ioctl(fd, I2C_SLAVE, addr);
+        address = addr;
+    }
+    
+    dg=i2c_smbus_write_byte_data(fd,cmd,value);
         
         if (dbg)
                 printf("wbk: %d\n",dg);

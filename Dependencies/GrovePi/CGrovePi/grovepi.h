@@ -26,10 +26,10 @@ extern unsigned long reg_addr;
 #define aWrite_cmd 	4
 #define pMode_cmd	5
 //Initialize
-int grovePiInit(void);
+int grove_pi_init(void);
 //Write a register
 int write_block(char cmd,char v1,char v2,char v3);
-int write_byte_data(char addr, char cmd,char value);
+int write_byte_data(unsigned char addr, unsigned char cmd, unsigned char value);
 //Read 1 byte of data
 char read_byte(void);
 

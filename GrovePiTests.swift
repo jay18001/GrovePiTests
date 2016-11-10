@@ -37,10 +37,5 @@ for _ in 1...5 {
 */
 
 var screen = GrovePiLCDRGB(color: RGBColor(red: 100, green: 100, blue: 100))
-
-//screen.setColor(color: RGBColor(red: 100, green: 100, blue: 100))
-print("test")
-screen.clearDisplay()
-
-screen.setText(string: "Hello")
-
+screen.set(text: "Hello\nWorld")
+print(screen)

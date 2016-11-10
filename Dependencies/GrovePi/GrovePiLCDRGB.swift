@@ -1,10 +1,14 @@
+import Foundation
+
 // I2C addresses
 fileprivate let I2CBacklight: UInt8 = 0x62
 fileprivate let I2CCharacter: UInt8 = 0x3e
 
 fileprivate let ClearDisplay: UInt8 = 0x01
-fileprivate let DisplayOn: UInt8 = 0x0F
+fileprivate let ReturnHome: UInt8 = 0x02
+fileprivate let DisplayOn: UInt8 = 0xFE
 fileprivate let TwoLines: UInt8 = 0x38
+fileprivate let NoCursor: UInt8 = 0x04
 
 //backlight registers
 fileprivate let blacklightMode1: UInt8 = 0x00
@@ -30,51 +34,92 @@ public struct RGBColor {
     }
 }
 
-public struct GrovePiLCDRGB {
+public struct GrovePiLCDRGB: CustomStringConvertible {
 
-    let color: RGBColor
+    public private(set) var color: RGBColor
+    public private(set) var text: String
 
-    public init(color: RGBColor) {
+    public var description: String {
+	var count = 0
+	var row = 0
+	var displayText = ""
+	for c in text.characters {
+            if c == "\n" || count == 16 {
+                count = 0
+                row += 1
+                if row == 2 {
+                    break
+                }
+		displayText.append("\n")                
+                if c == "\n" {
+                    continue
+                }
+            }
+            count += 1
+	    displayText.append(c)
+        }
+        return "LCD-RGB-Screen Color: \(self.color)\n\(displayText)"
+    }
+
+
+    public init(text: String = "", color: RGBColor) {
         self.color = color
+	self.text = text
+	_ = GrovePiManager.sharedManager
         setup()
-	
     }
 
     private func setup() {
-       	print("blacklightMode1 \(writeBlock(.digitalWrite, I2CBacklight, blacklightMode1, blacklightMode1))")
-	print("blacklightMode2 \(writeBlock(.digitalWrite, I2CBacklight, blacklightMode2, blacklightMode1))")        
-        print("blacklightLEDout \(writeBlock(.digitalWrite, I2CBacklight, 8, UInt8(0xaa)))")
-	setupColor(color: color)
-	print("setupColor")
+       	writeBlock(I2CBacklight, blacklightMode1, blacklightMode1)
+	writeBlock(I2CBacklight, blacklightMode2, blacklightMode1)        
+        writeBlock(I2CBacklight, blacklightLEDout, UInt8(0xaa))
+	setup(color: color)
     }
 	
     public func clearDisplay() {
-        _ = writeBlock(.digitalWrite, I2CCharacter, characterDisplay, ClearDisplay)
-	print("characterDisplay")
+        writeBlock(I2CCharacter, characterDisplay, ClearDisplay)
     }
 
-    private func setupColor(color: RGBColor) {
-        _ = writeBlock(.digitalWrite, I2CBacklight, blacklightBlue, color.blue)
-        print("blacklightBlue")
-	_ = writeBlock(.digitalWrite, I2CBacklight, blacklightRed, color.red)
-        print("blacklightRed")
-	_ = writeBlock(.digitalWrite, I2CBacklight, blacklightGreen, color.green)
-    	print("blacklightGreen")
+    private func setup(color: RGBColor) {
+        writeBlock(I2CBacklight, blacklightBlue, color.blue)
+	writeBlock(I2CBacklight, blacklightRed, color.red)
+	writeBlock(I2CBacklight, blacklightGreen, color.green)
     }
 
-    public mutating func setColor(color: RGBColor) {
-        self.setupColor(color: color)
+    public mutating func set(color: RGBColor) {
+        self.color = color
+	self.setup(color: color)
     }
 
-    public func setText(string: String) {
-        _ = writeBlock(.digitalWrite, I2CCharacter, characterDisplay, DisplayOn)
-        print("characterDisplay-DisplayOn")
-	_ = writeBlock(.digitalWrite, I2CCharacter, characterDisplay, TwoLines)
-	print("characterDisplay-TwoLines")
-        let characters = string.characters.flatMap { UInt8(String($0)) }
-        characters.forEach {
-            _ = writeBlock(.digitalWrite, I2CCharacter, characterLetters, $0)
-      	    print("I2CCharacter-characterLetters")
-	}
+    public mutating func set(text: String, refresh: Bool = true) {
+	self.text = text
+
+        writeBlock(I2CCharacter, characterDisplay, refresh ? ClearDisplay : ReturnHome)
+        writeBlock(I2CCharacter, characterDisplay, DisplayOn)
+        
+        writeBlock(I2CCharacter, characterDisplay, TwoLines)
+        
+        let characters = text.characters.flatMap { String($0).utf8.first }
+        
+   	var count = 0
+	var row = 0
+    
+        for c in characters {
+            if c == 0x0A || count == 16 {
+                count = 0
+                row += 1
+                if row == 2 {
+                    break
+                }
+                writeBlock(I2CCharacter, characterDisplay, UInt8(0xc0))
+                
+		if c == 0x0A {
+                    continue
+                }
+            }
+            count += 1
+            
+            writeBlock(I2CCharacter, characterLetters, c)
+        }
     }
 }

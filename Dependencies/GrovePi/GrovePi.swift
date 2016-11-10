@@ -6,7 +6,7 @@ internal class GrovePiManager {
     static var sharedManager = GrovePiManager()
     
     init() {
-        grovePiInit()
+        grove_pi_init()
     }
 }
 
@@ -53,8 +53,8 @@ public struct GrovePiItem {
     }
 }
 
-internal func writeBlock(_ cmd: Commands, _ v1: UInt8, _ v2: UInt8, _ v3: UInt8) -> Int32 {
-    return write_byte_data(Int8(v1), Int8(v2), Int8(v3)) //Call into C api
+internal func writeBlock(_ address: UInt8, _ command: UInt8, _ value: UInt8) {
+    write_byte_data(address, command, value) //Call into C api
 }
 
 internal enum Commands: Int8 {
